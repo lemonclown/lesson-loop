@@ -23,13 +23,13 @@ User request (optional filters, e.g. "global", "codex only", "last 14 days", "ma
 - Claude Code sessions: `~/.claude/projects/<encoded-cwd>/<session-id>.jsonl`
 - Codex CLI sessions (only if `~/.codex` exists): `~/.codex/sessions/**/rollout-*.jsonl` (and any `*.jsonl`)
 
-Run a discovery pass (adapt the caps/age to the user's filters). This skips already-mined sessions, the still-live session, sub-agent transcripts, and below-threshold noise, then lists the busiest first:
+Run a discovery pass (adapt the caps/age to the user's filters). This skips already-mined sessions, the still-live session, sub-agent transcripts, and below-threshold noise. It prints the **total un-mined count** first, then the bounded batch (busiest first) you will actually process this run:
 
 ```bash
 LEDGER=~/.lesson-loop/processed; touch "$LEDGER"
-NOW=$(date +%s); THRESH=5; MAX=20
-{ find "$HOME/.claude/projects" -name '*.jsonl' -type f -not -path '*/subagents/*' -print0 2>/dev/null
-  find "$HOME/.codex/sessions" -name '*.jsonl' -type f -print0 2>/dev/null; } |
+NOW=$(date +%s); THRESH=5; BATCH=5          # process at most BATCH sessions per invocation
+ALL=$({ find "$HOME/.claude/projects" -name '*.jsonl' -type f -not -path '*/subagents/*' -print0 2>/dev/null
+        find "$HOME/.codex/sessions" -name '*.jsonl' -type f -print0 2>/dev/null; } |
 while IFS= read -r -d '' f; do
   grep -qxF "$f" "$LEDGER" && continue                              # already mined
   age=$(( (NOW - $(stat -f %m "$f" 2>/dev/null || stat -c %Y "$f")) / 60 ))
@@ -37,24 +37,38 @@ while IFS= read -r -d '' f; do
   n=$(grep -oE 'tool_use|function_call' "$f" | wc -l | tr -d ' ')   # cheap tool-call signal
   [ "$n" -lt "$THRESH" ] && continue                                # below threshold
   printf '%s\t%s\n' "$n" "$f"
-done | sort -rn | head -"$MAX"
+done | sort -rn)
+TOTAL=$(printf '%s' "$ALL" | grep -c .)
+echo "UN-MINED CANDIDATES: $TOTAL  (processing up to $BATCH this run)"
+printf '%s\n' "$ALL" | head -"$BATCH"
 ```
 
-Notes: `stat -f %m` is macOS, `stat -c %Y` is Linux — the fallback handles both. Filter to a project by grepping the encoded path. If nothing comes back, report that and stop.
+Notes: `stat -f %m` is macOS, `stat -c %Y` is Linux — the fallback handles both. Filter to a project by grepping the encoded path. Capture `TOTAL` and the batch list — you must report both later. If `TOTAL` is 0, say everything is already mined and stop. Do **not** raise `BATCH` to "do them all in one go": one invocation = one small batch, and the ledger lets the user re-run to continue. Bigger batches are exactly what makes the run stall midway.
 
-## 3. Extract — per candidate, busiest first
+## 3. Extract — every item in the batch, one at a time
+
+Process **every** transcript in the batch from step 2 — do not stop after the first one or two. Go strictly one at a time, finish each (including its ledger + log line) before moving to the next, so progress is durable even if you are interrupted. The batch is small on purpose; there is no reason to quit before it is exhausted.
 
 For each candidate transcript:
 
-1. **Read it.** Recover the human intent: Claude transcripts carry an `ai-title` line and a `cwd`; Codex rollouts open with the first user message. Skip sub-agent/tool-only noise.
+1. **Read it — but bound the cost.** Recover the human intent: Claude transcripts carry an `ai-title` line and a `cwd`; Codex rollouts open with the first user message. For a **large transcript** (the tool-call count from step 2 is high, e.g. > 1500), do NOT read the whole file — that is what exhausts context and makes the run stall. Instead read selectively: the `ai-title`/`cwd`, the user turns (e.g. `grep '"role":"user"'` or `grep '"type":"user"'`), and a sample of the head and tail. Skip sub-agent/tool-only noise.
 2. **Judge reusability** with the reflect skill's bar — save only if at least one holds: a multi-step procedure that achieved a concrete outcome; recovery from a non-obvious error; a user correction that revealed a durable preference or project convention; a setup/config recipe likely to recur. If the session was trivial, exploratory, or one-off, save nothing for it.
 3. **Dedup before writing.** Glob `<target-dir>/*/SKILL.md` and read any on a related topic. If a similar skill exists, **IMPROVE** it with a targeted edit; only create `<target-dir>/<kebab-name>/SKILL.md` if none fits. Frontmatter: `name` and `description` (the description must say what it does AND when to load it), then a concise procedure — Goal, Steps, Tools used, Pitfalls/edge cases, and any user preference observed. Never paste the raw transcript.
 4. **Record the outcome** regardless of decision:
    - Append the transcript's absolute path to `~/.lesson-loop/processed` (so future runs skip it).
    - Append one audit line to `~/.lesson-loop/log`: `mined <created|updated|skipped> <skill-or-session> -- <one-line reason>`.
 
-Work through a bounded batch (the `MAX` cap). Mining the whole history at once is wasteful — the cap plus the ledger make repeated runs cheap and incremental.
+## 4. Report — always, even if you stopped early
 
-## 4. Report
+End with a coverage summary so the user knows exactly how much of their history was covered. This is mandatory: produce it even if you had to stop before finishing the batch. Report the real numbers, never imply you reviewed everything when you reviewed a batch.
 
-Summarize: how many candidates were scanned, which skills you created or updated (with paths), and which sessions you skipped and why. Note that re-running later picks up only newer/un-mined sessions, since the ledger excludes everything already processed.
+```
+Mined this run: <R> of <TOTAL> un-mined candidates
+  created:  <skill names + paths>
+  updated:  <skill names + paths>
+  skipped:  <count> (trivial/one-off)
+Remaining un-mined: <TOTAL - R>
+To continue: re-run /lesson-loop:mine   (the ledger skips everything already processed)
+```
+
+If `TOTAL - R > 0`, explicitly tell the user to re-run to cover the rest — the ledger makes each run pick up only what is left, so repeated runs are cheap and incremental.
