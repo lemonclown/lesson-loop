@@ -96,10 +96,17 @@ fi
 
 echo "$(ts) spawn event=$EVENT session=$SESSION toolcalls=$TOOLCALLS scope=$SCOPE dir=$SKILLS_DIR model=$MODEL" >> "$LOG"
 
+# Pre-create the skills dir so the extractor writes into an existing, in-bounds dir.
+mkdir -p "$SKILLS_DIR"
+
 # Detach so the work survives this session's exit and never blocks it.
+# Instead of a blanket bypassPermissions, grant only the two directories the
+# extractor needs (skills + log) via --add-dir, and allowlist a Bash-free toolset.
+# This keeps the headless run non-interactive without granting unrestricted access.
 LESSON_LOOP_SKIP=1 nohup "$CLAUDE_BIN" -p "$PROMPT" \
   --model "$MODEL" \
-  --permission-mode bypassPermissions \
+  --add-dir "$SKILLS_DIR" \
+  --add-dir "$LOGDIR" \
   --allowedTools "Read" "Write" "Edit" "Glob" "Grep" \
   >> "$LOGDIR/extractor.log" 2>&1 &
 disown 2>/dev/null || true
