@@ -1,0 +1,14 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "hermes-loop",
+  "description": "Self-improving learning loop for Claude Code, modeled on Nous Research's Hermes Agent.",
+  "owner": { "name": "chaosillu" },
+  "plugins": [
+    {
+      "name": "hermes-loop",
+      "description": "After a complex session, auto-extracts the workflow into a reusable skill (Hermes Agent style) so future sessions don't re-reason from scratch. Triggers on SessionEnd and PreCompact.",
+      "category": "productivity",
+      "source": "./plugins/hermes-loop"
+    }
+  ]
+}

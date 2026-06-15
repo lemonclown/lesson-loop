@@ -1,0 +1,16 @@
+{
+  "name": "hermes-loop",
+  "displayName": "Hermes Learning Loop",
+  "version": "0.2.0",
+  "description": "Self-improving learning loop for Claude Code. After a complex session, auto-extracts the workflow into a reusable skill (Hermes Agent style) so future sessions don't re-reason from scratch.",
+  "author": { "name": "chaosillu" },
+  "keywords": ["memory", "skills", "self-improving", "hermes", "learning-loop"],
+  "userConfig": {
+    "scope": {
+      "type": "string",
+      "title": "Skill storage scope",
+      "description": "Where auto-extracted skills are saved. One of: global | project | auto. global = ~/.claude/skills (loaded in every project). project = <cwd>/.claude/skills (only the originating project). auto = project if cwd looks like a project (.git or .claude present), else global.",
+      "default": "auto"
+    }
+  }
+}
