@@ -39,25 +39,25 @@ if [ "$TOOLCALLS" -lt "$THRESHOLD" ]; then
 fi
 
 # --- resolve skill storage scope: global | project | auto ---
-# priority: LESSON_LOOP_SCOPE env > config file > plugin userConfig env > default(auto)
+# priority: LESSON_LOOP_SCOPE env > config file > plugin userConfig env > default(global)
 SCOPE="${LESSON_LOOP_SCOPE:-}"
 if [ -z "$SCOPE" ] && [ -f "$HOME/.lesson-loop/config" ]; then
   SCOPE="$(grep -E '^scope=' "$HOME/.lesson-loop/config" 2>/dev/null | tail -1 | cut -d= -f2 | tr -d '[:space:]')"
 fi
 SCOPE="${SCOPE:-${CLAUDE_PLUGIN_OPTION_SCOPE:-}}"
-SCOPE="${SCOPE:-auto}"
+SCOPE="${SCOPE:-global}"
 
 case "$SCOPE" in
-  global)
-    SKILLS_DIR="$HOME/.claude/skills" ;;
   project)
     SKILLS_DIR="$CWD/.claude/skills" ;;
-  auto|*)
+  auto)
     if [ -n "$CWD" ] && { [ -d "$CWD/.git" ] || [ -d "$CWD/.claude" ]; }; then
       SKILLS_DIR="$CWD/.claude/skills"
     else
       SKILLS_DIR="$HOME/.claude/skills"
     fi ;;
+  global|*)
+    SKILLS_DIR="$HOME/.claude/skills" ;;
 esac
 
 read -r -d '' PROMPT <<EOF

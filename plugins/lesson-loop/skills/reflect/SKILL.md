@@ -11,7 +11,7 @@ Decide whether the session contains a NON-TRIVIAL, REUSABLE workflow worth savin
 - a user correction that revealed a durable preference or project convention
 - a setup/config recipe likely to recur
 
-First determine the storage scope (where to save): read `~/.lesson-loop/config` for a `scope=` line (global / project / auto). If unset, treat as `auto`. Resolve the target dir:
+First determine the storage scope (where to save): read `~/.lesson-loop/config` for a `scope=` line (global / project / auto). If unset, treat as `global`. Resolve the target dir:
 - global → `~/.claude/skills`
 - project → `<this project>/.claude/skills`
 - auto → the project's `.claude/skills` if the cwd looks like a project (`.git` or `.claude` present), else `~/.claude/skills`

@@ -25,13 +25,24 @@ The extractor only ever writes under `~/.claude/skills/` and `~/.lesson-loop/`.
 Run `/lesson-loop:reflect` mid-session to extract a skill from the current session now,
 without waiting for it to end.
 
+## Mining past sessions (backfill)
+
+Run `/lesson-loop:mine` to scan **previously recorded** Claude Code (`~/.claude/projects`)
+and Codex CLI (`~/.codex/sessions`) transcripts and distill the reusable ones into skills.
+It is opt-in and best-effort: trivial sessions are skipped, sub-agent transcripts and the
+live session are ignored, and existing skills are improved rather than duplicated.
+
+A ledger at `~/.lesson-loop/processed` records every transcript already examined, so re-runs
+are idempotent and pick up only newer sessions. Pass filters in natural language, e.g.
+`/lesson-loop:mine global last 14 days max 10` or `/lesson-loop:mine codex only`.
+
 ## Skill storage scope (global / project / auto)
 
 Controls **where** auto-extracted skills are saved:
 
-- `global` → `~/.claude/skills` (loaded in every project)
+- `global` (default) → `~/.claude/skills` (loaded in every project)
 - `project` → `<cwd>/.claude/skills` (only the originating project)
-- `auto` (default) → project dir if cwd looks like a project (`.git` or `.claude` present), else global
+- `auto` → project dir if cwd looks like a project (`.git` or `.claude` present), else global
 
 Set it (any of these; precedence top to bottom):
 
@@ -40,7 +51,7 @@ Set it (any of these; precedence top to bottom):
    **`/lesson-loop:config project`** (works after install, any install type)
 3. Plugin userConfig: at install `claude plugin install lesson-loop@<marketplace> --config scope=project`,
    or edit `pluginConfigs["lesson-loop@skills-dir"].options.scope` in `~/.claude/settings.json`
-4. Default: `auto`
+4. Default: `global`
 
 ## Configuration (environment variables)
 
@@ -54,8 +65,9 @@ Set it (any of these; precedence top to bottom):
 
 ## Logs
 
-- `~/.lesson-loop/log` — one audit line per session (skip / spawn / created / updated)
+- `~/.lesson-loop/log` — one audit line per session (skip / spawn / created / updated / mined)
 - `~/.lesson-loop/extractor.log` — stdout/stderr of the headless extractor
+- `~/.lesson-loop/processed` — ledger of historical transcripts already examined by `/lesson-loop:mine`
 
 ## Install
 
