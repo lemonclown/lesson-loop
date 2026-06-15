@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# hermes-loop: SessionEnd extractor.
+# lesson-loop: SessionEnd extractor.
 # Reads the just-ended session transcript; if it was a non-trivial, reusable
 # workflow, spawns a detached headless `claude` to distill it into a skill.
 set -uo pipefail
 
-LOGDIR="$HOME/.hermes-loop"
+LOGDIR="$HOME/.lesson-loop"
 mkdir -p "$LOGDIR"
 LOG="$LOGDIR/log"
 ts() { date "+%Y-%m-%dT%H:%M:%S%z"; }
 
 # --- recursion guard: don't fire for the extractor's own headless session ---
-if [ -n "${HERMES_LOOP_SKIP:-}" ]; then
+if [ -n "${LESSON_LOOP_SKIP:-}" ]; then
   exit 0
 fi
 
@@ -29,7 +29,7 @@ if [ -z "$TRANSCRIPT" ] || [ ! -f "$TRANSCRIPT" ]; then
 fi
 
 # --- threshold check: count tool calls in the transcript ---
-THRESHOLD="${HERMES_LOOP_THRESHOLD:-5}"
+THRESHOLD="${LESSON_LOOP_THRESHOLD:-5}"
 TOOLCALLS="$(grep -oE '"type"[[:space:]]*:[[:space:]]*"tool_use"' "$TRANSCRIPT" 2>/dev/null | wc -l | tr -d ' ')"
 TOOLCALLS="${TOOLCALLS:-0}"
 
@@ -39,10 +39,10 @@ if [ "$TOOLCALLS" -lt "$THRESHOLD" ]; then
 fi
 
 # --- resolve skill storage scope: global | project | auto ---
-# priority: HERMES_LOOP_SCOPE env > config file > plugin userConfig env > default(auto)
-SCOPE="${HERMES_LOOP_SCOPE:-}"
-if [ -z "$SCOPE" ] && [ -f "$HOME/.hermes-loop/config" ]; then
-  SCOPE="$(grep -E '^scope=' "$HOME/.hermes-loop/config" 2>/dev/null | tail -1 | cut -d= -f2 | tr -d '[:space:]')"
+# priority: LESSON_LOOP_SCOPE env > config file > plugin userConfig env > default(auto)
+SCOPE="${LESSON_LOOP_SCOPE:-}"
+if [ -z "$SCOPE" ] && [ -f "$HOME/.lesson-loop/config" ]; then
+  SCOPE="$(grep -E '^scope=' "$HOME/.lesson-loop/config" 2>/dev/null | tail -1 | cut -d= -f2 | tr -d '[:space:]')"
 fi
 SCOPE="${SCOPE:-${CLAUDE_PLUGIN_OPTION_SCOPE:-}}"
 SCOPE="${SCOPE:-auto}"
@@ -61,7 +61,7 @@ case "$SCOPE" in
 esac
 
 read -r -d '' PROMPT <<EOF
-You are the hermes-loop skill extractor. A Claude Code session just ended and you decide whether it produced a reusable workflow worth saving.
+You are the lesson-loop skill extractor. A Claude Code session just ended and you decide whether it produced a reusable workflow worth saving.
 
 Session transcript (JSONL): $TRANSCRIPT
 Session working dir: $CWD
@@ -82,12 +82,12 @@ Do this:
 Hard rule: only create/modify files under "$SKILLS_DIR/" and "$LOGDIR/". Touch nothing else.
 EOF
 
-if [ -n "${HERMES_LOOP_DRYRUN:-}" ]; then
+if [ -n "${LESSON_LOOP_DRYRUN:-}" ]; then
   echo "$(ts) DRYRUN event=$EVENT session=$SESSION toolcalls=$TOOLCALLS scope=$SCOPE dir=$SKILLS_DIR would-spawn-extractor" >> "$LOG"
   exit 0
 fi
 
-MODEL="${HERMES_LOOP_MODEL:-sonnet}"
+MODEL="${LESSON_LOOP_MODEL:-sonnet}"
 CLAUDE_BIN="$(command -v claude || true)"
 if [ -z "$CLAUDE_BIN" ]; then
   echo "$(ts) error event=$EVENT session=$SESSION reason=claude-not-on-path" >> "$LOG"
@@ -97,7 +97,7 @@ fi
 echo "$(ts) spawn event=$EVENT session=$SESSION toolcalls=$TOOLCALLS scope=$SCOPE dir=$SKILLS_DIR model=$MODEL" >> "$LOG"
 
 # Detach so the work survives this session's exit and never blocks it.
-HERMES_LOOP_SKIP=1 nohup "$CLAUDE_BIN" -p "$PROMPT" \
+LESSON_LOOP_SKIP=1 nohup "$CLAUDE_BIN" -p "$PROMPT" \
   --model "$MODEL" \
   --permission-mode bypassPermissions \
   --allowedTools "Read" "Write" "Edit" "Glob" "Grep" \

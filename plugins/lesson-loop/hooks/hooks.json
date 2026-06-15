@@ -7,7 +7,7 @@
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}\"/scripts/extract-skill.sh",
             "timeout": 30,
-            "statusMessage": "hermes-loop: checking session for reusable skills"
+            "statusMessage": "lesson-loop: checking session for reusable skills"
           }
         ]
       }
@@ -19,7 +19,7 @@
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}\"/scripts/extract-skill.sh",
             "timeout": 30,
-            "statusMessage": "hermes-loop: extracting skills before compaction"
+            "statusMessage": "lesson-loop: extracting skills before compaction"
           }
         ]
       }

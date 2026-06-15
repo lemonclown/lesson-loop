@@ -1,4 +1,4 @@
-# hermes-loop
+# lesson-loop
 
 A self-improving learning loop for Claude Code, modeled on Nous Research's Hermes Agent.
 After a complex session ends, it distills the workflow into a reusable **skill** so future
@@ -15,14 +15,14 @@ sessions load it instead of re-reasoning from scratch.
 3. Otherwise it spawns a **detached, headless `claude -p`** extractor that reads the
    transcript, judges whether the work is reusable, and writes/patches a skill under
    `~/.claude/skills/<name>/SKILL.md`. New skills auto-load on the next session.
-4. A recursion guard (`HERMES_LOOP_SKIP`) stops the extractor's own session from
+4. A recursion guard (`LESSON_LOOP_SKIP`) stops the extractor's own session from
    re-triggering the loop.
 
-The extractor only ever writes under `~/.claude/skills/` and `~/.hermes-loop/`.
+The extractor only ever writes under `~/.claude/skills/` and `~/.lesson-loop/`.
 
 ## Manual trigger
 
-Run `/hermes-loop:reflect` mid-session to extract a skill from the current session now,
+Run `/lesson-loop:reflect` mid-session to extract a skill from the current session now,
 without waiting for it to end.
 
 ## Skill storage scope (global / project / auto)
@@ -35,29 +35,29 @@ Controls **where** auto-extracted skills are saved:
 
 Set it (any of these; precedence top to bottom):
 
-1. `HERMES_LOOP_SCOPE=project` environment variable (one-off override)
-2. Config file `~/.hermes-loop/config` with a line `scope=project` — set it easily with
-   **`/hermes-loop:config project`** (works after install, any install type)
-3. Plugin userConfig: at install `claude plugin install hermes-loop@<marketplace> --config scope=project`,
-   or edit `pluginConfigs["hermes-loop@skills-dir"].options.scope` in `~/.claude/settings.json`
+1. `LESSON_LOOP_SCOPE=project` environment variable (one-off override)
+2. Config file `~/.lesson-loop/config` with a line `scope=project` — set it easily with
+   **`/lesson-loop:config project`** (works after install, any install type)
+3. Plugin userConfig: at install `claude plugin install lesson-loop@<marketplace> --config scope=project`,
+   or edit `pluginConfigs["lesson-loop@skills-dir"].options.scope` in `~/.claude/settings.json`
 4. Default: `auto`
 
 ## Configuration (environment variables)
 
 | Var | Default | Meaning |
 |-----|---------|---------|
-| `HERMES_LOOP_SCOPE` | (unset) | `global`/`project`/`auto` override for skill storage location (see above) |
-| `HERMES_LOOP_THRESHOLD` | `5` | Min tool calls before extraction runs |
-| `HERMES_LOOP_MODEL` | `sonnet` | Model for the headless extractor |
-| `HERMES_LOOP_DRYRUN` | unset | If set, log the decision but don't spawn the extractor |
-| `HERMES_LOOP_SKIP` | (auto) | Internal recursion guard; do not set manually |
+| `LESSON_LOOP_SCOPE` | (unset) | `global`/`project`/`auto` override for skill storage location (see above) |
+| `LESSON_LOOP_THRESHOLD` | `5` | Min tool calls before extraction runs |
+| `LESSON_LOOP_MODEL` | `sonnet` | Model for the headless extractor |
+| `LESSON_LOOP_DRYRUN` | unset | If set, log the decision but don't spawn the extractor |
+| `LESSON_LOOP_SKIP` | (auto) | Internal recursion guard; do not set manually |
 
 ## Logs
 
-- `~/.hermes-loop/log` — one audit line per session (skip / spawn / created / updated)
-- `~/.hermes-loop/extractor.log` — stdout/stderr of the headless extractor
+- `~/.lesson-loop/log` — one audit line per session (skip / spawn / created / updated)
+- `~/.lesson-loop/extractor.log` — stdout/stderr of the headless extractor
 
 ## Install
 
-Lives at `~/.claude/skills/hermes-loop/`, which Claude Code auto-loads as
-`hermes-loop@skills-dir` on the next session. Verify with `claude plugin list`.
+Lives at `~/.claude/skills/lesson-loop/`, which Claude Code auto-loads as
+`lesson-loop@skills-dir` on the next session. Verify with `claude plugin list`.

@@ -1,9 +1,9 @@
 ---
 name: reflect
-description: Reflect on the current session and, if it held a reusable workflow, create or improve a skill under ~/.claude/skills/. Use to trigger the Hermes learning loop manually right now instead of waiting for session end.
+description: Reflect on the current session and, if it held a reusable workflow, create or improve a skill under ~/.claude/skills/. Use to trigger the learning loop manually right now instead of waiting for session end.
 ---
 
-Review what we have done in this session so far, then run the Hermes learning loop on it.
+Review what we have done in this session so far, then run the learning loop on it.
 
 Decide whether the session contains a NON-TRIVIAL, REUSABLE workflow worth saving as a skill. Save only if at least one is true:
 - a multi-step procedure (~5+ meaningful steps) that achieved a concrete outcome
@@ -11,7 +11,7 @@ Decide whether the session contains a NON-TRIVIAL, REUSABLE workflow worth savin
 - a user correction that revealed a durable preference or project convention
 - a setup/config recipe likely to recur
 
-First determine the storage scope (where to save): read `~/.hermes-loop/config` for a `scope=` line (global / project / auto). If unset, treat as `auto`. Resolve the target dir:
+First determine the storage scope (where to save): read `~/.lesson-loop/config` for a `scope=` line (global / project / auto). If unset, treat as `auto`. Resolve the target dir:
 - global → `~/.claude/skills`
 - project → `<this project>/.claude/skills`
 - auto → the project's `.claude/skills` if the cwd looks like a project (`.git` or `.claude` present), else `~/.claude/skills`
