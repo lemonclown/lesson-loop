@@ -10,18 +10,18 @@ of re-reasoning from scratch.
 In Claude Code:
 
 ```
-/plugin marketplace add chaosillu/lesson-loop
+/plugin marketplace add https://github.com/lemonclown/lesson-loop.git
 /plugin install lesson-loop@lesson-loop
 ```
 
 Or from the CLI:
 
 ```bash
-claude plugin marketplace add chaosillu/lesson-loop
+claude plugin marketplace add https://github.com/lemonclown/lesson-loop.git
 claude plugin install lesson-loop@lesson-loop
 ```
 
-> Replace `chaosillu/lesson-loop` with your `<github-user>/<repo>` if you forked it.
+> Replace `lemonclown/lesson-loop` with your `<github-user>/<repo>` if you forked it.
 > `lesson-loop@lesson-loop` = `<plugin-name>@<marketplace-name>` (both are `lesson-loop` here).
 
 After installing, restart Claude Code (or run `/reload-plugins`).

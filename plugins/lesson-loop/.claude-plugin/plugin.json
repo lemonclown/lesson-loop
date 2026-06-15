@@ -3,7 +3,7 @@
   "displayName": "Lesson Learning Loop",
   "version": "0.2.0",
   "description": "Self-improving learning loop for Claude Code. After a complex session, auto-extracts the workflow into a reusable skill (Hermes Agent style) so future sessions don't re-reason from scratch.",
-  "author": { "name": "chaosillu" },
+  "author": { "name": "lemonclown" },
   "keywords": ["memory", "skills", "self-improving", "learning-loop"],
   "userConfig": {
     "scope": {

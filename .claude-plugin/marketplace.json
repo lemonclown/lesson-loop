@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "lesson-loop",
   "description": "Self-improving learning loop for Claude Code, modeled on Nous Research's Hermes Agent.",
-  "owner": { "name": "chaosillu" },
+  "owner": { "name": "lemonclown" },
   "plugins": [
     {
       "name": "lesson-loop",
