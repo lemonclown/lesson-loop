@@ -26,8 +26,26 @@ User request (optional filters, e.g. "global", "codex only", "last 14 days", "ma
 Run a discovery pass (adapt the caps/age to the user's filters). This skips already-mined sessions, the still-live session, sub-agent transcripts, and below-threshold noise. It prints the **total un-mined count** first, then the bounded batch (busiest first) you will actually process this run:
 
 ```bash
+SKILL_DIR=<the "Base directory for this skill" path given at the top of this prompt>
 LEDGER=~/.lesson-loop/processed; touch "$LEDGER"
 NOW=$(date +%s); THRESH=5; BATCH=5          # process at most BATCH sessions per invocation
+
+# Codex can import Claude sessions; those rollouts duplicate a transcript that is
+# already reachable under ~/.claude/projects. List them so they can be skipped.
+IMPORTS=$(mktemp); python3 - "$IMPORTS" <<'IMPEOF'
+import json, os, sys, glob
+out = open(sys.argv[1], "w")
+try:
+    recs = json.load(open(os.path.expanduser("~/.codex/external_agent_session_imports.json")))["records"]
+except Exception:
+    recs = []
+ids = {r["imported_thread_id"] for r in recs if r.get("imported_thread_id")}
+for p in glob.glob(os.path.expanduser("~/.codex/sessions/**/*.jsonl"), recursive=True):
+    tid = os.path.basename(p)[:-6].rsplit("-", 5)[-5:]
+    tid = "-".join(tid)
+    if tid in ids:
+        out.write(p + "\n")
+IMPEOF
 ALL=$({ find "$HOME/.claude/projects" -name '*.jsonl' -type f -not -path '*/subagents/*' -print0 2>/dev/null
         find "$HOME/.codex/sessions" -name '*.jsonl' -type f -print0 2>/dev/null; } |
 while IFS= read -r -d '' f; do
@@ -36,14 +54,39 @@ while IFS= read -r -d '' f; do
   [ "$age" -lt 2 ] && continue                                      # skip the live / just-ended session
   n=$(grep -oE 'tool_use|function_call' "$f" | wc -l | tr -d ' ')   # cheap tool-call signal
   [ "$n" -lt "$THRESH" ] && continue                                # below threshold
-  printf '%s\t%s\n' "$n" "$f"
+  h=$(python3 "$SKILL_DIR/human_turns.py" "$f")                     # real human turns, not agent scaffolding
+  [ "$h" -lt 1 ] && continue                                        # subagent / goal-driven rollout: nothing to distill
+  grep -qxF "$f" "$IMPORTS" && continue                             # a Codex copy of a Claude session (mine the original)
+  printf '%s\t%s\t%s\n' "$n" "$h" "$f"
 done | sort -rn)
 TOTAL=$(printf '%s' "$ALL" | grep -c .)
 echo "UN-MINED CANDIDATES: $TOTAL  (processing up to $BATCH this run)"
 printf '%s\n' "$ALL" | head -"$BATCH"
 ```
 
-Notes: `stat -f %m` is macOS, `stat -c %Y` is Linux — the fallback handles both. Filter to a project by grepping the encoded path. Capture `TOTAL` and the batch list — you must report both later. If `TOTAL` is 0, say everything is already mined and stop. Do **not** raise `BATCH` to "do them all in one go": one invocation = one small batch, and the ledger lets the user re-run to continue. Bigger batches are exactly what makes the run stall midway.
+Notes: `stat -f %m` is macOS, `stat -c %Y` is Linux — the fallback handles both.
+The columns are `<tool-calls>\t<human-turns>\t<path>`.
+
+**The human-turn filter matters more than the tool-call count.** Both CLIs write
+sub-agent and goal-loop transcripts into the same directories as real sessions,
+and those can carry hundreds of tool calls with no human instruction at all — on
+one history, 17 of 39 remaining Codex rollouts were agent-only. A transcript with
+zero human turns has no intent to distill: the agent was executing someone else's
+plan, and whatever is worth keeping belongs to the parent session. `--not-path
+'*/subagents/*'` only catches the Claude-side convention, so filter on content.
+A second duplicate source: Codex can **import** a Claude session, which writes a
+second copy of the same conversation under `~/.codex/sessions/`. The mapping is
+in `~/.codex/external_agent_session_imports.json` (`imported_thread_id` → the
+original `source_path`); the thread id is the trailing UUID of the rollout
+filename. Always mine the Claude original, never the import — on one history 6 of
+39 remaining Codex rollouts were imports, and half of those duplicated sessions
+that had already been mined.
+
+`human_turns.py` (next to this SKILL.md) counts user messages after dropping
+`<environment_context>`, `<codex_internal_context>`, `<recommended_plugins>`,
+injected `<skill>` bodies, `Stop hook feedback:` lines, and tool results — i.e.
+everything a person did not type. Prefer a transcript with many human turns over
+one with a higher tool-call count; long agent monologues are where a run stalls. Filter to a project by grepping the encoded path. Capture `TOTAL` and the batch list — you must report both later. If `TOTAL` is 0, say everything is already mined and stop. Do **not** raise `BATCH` to "do them all in one go": one invocation = one small batch, and the ledger lets the user re-run to continue. Bigger batches are exactly what makes the run stall midway.
 
 ## 3. Extract — every item in the batch, one at a time
 
