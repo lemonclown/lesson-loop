@@ -20,6 +20,14 @@ sessions load it instead of re-reasoning from scratch.
 
 The extractor only ever writes under `~/.claude/skills/` and `~/.lesson-loop/`.
 
+## Quality rules
+
+`rules/skill-quality.md` is shared by the hook extractor, `/lesson-loop:reflect` and
+`/lesson-loop:mine`: separate general from project-specific knowledge, extend a skill only
+within its description, integrate instead of appending addenda, verify paths against the
+filesystem, check memory/other skills for contradictions, and record a user preference only
+when it is stated as standing.
+
 ## Manual trigger
 
 Run `/lesson-loop:reflect` mid-session to extract a skill from the current session now,
@@ -40,9 +48,13 @@ are idempotent and pick up only newer sessions. Pass filters in natural language
 
 Controls **where** auto-extracted skills are saved:
 
-- `global` (default) → `~/.claude/skills` (loaded in every project)
+Placement is decided by **content**, following `rules/skill-quality.md`:
+general knowledge goes to `~/.claude/skills`, project-specific knowledge (paths, ports, services,
+repo conventions) goes to the originating project's `.claude/skills`, and plain facts are left
+to memory. The scope setting only changes the fallback:
+
+- `auto` (default) / `global` → general → `~/.claude/skills`; project-specific → `<cwd>/.claude/skills` if cwd looks like a project, else skipped
 - `project` → `<cwd>/.claude/skills` (only the originating project)
-- `auto` → project dir if cwd looks like a project (`.git` or `.claude` present), else global
 
 Set it (any of these; precedence top to bottom):
 
@@ -51,7 +63,7 @@ Set it (any of these; precedence top to bottom):
    **`/lesson-loop:config project`** (works after install, any install type)
 3. Plugin userConfig: at install `claude plugin install lesson-loop@<marketplace> --config scope=project`,
    or edit `pluginConfigs["lesson-loop@skills-dir"].options.scope` in `~/.claude/settings.json`
-4. Default: `global`
+4. Default: `auto`
 
 ## Configuration (environment variables)
 
@@ -59,7 +71,7 @@ Set it (any of these; precedence top to bottom):
 |-----|---------|---------|
 | `LESSON_LOOP_SCOPE` | (unset) | `global`/`project`/`auto` override for skill storage location (see above) |
 | `LESSON_LOOP_THRESHOLD` | `5` | Min tool calls before extraction runs |
-| `LESSON_LOOP_MODEL` | `sonnet` | Model for the headless extractor |
+| `LESSON_LOOP_MODEL` | `opus` | Model for the headless extractor |
 | `LESSON_LOOP_DRYRUN` | unset | If set, log the decision but don't spawn the extractor |
 | `LESSON_LOOP_SKIP` | (auto) | Internal recursion guard; do not set manually |
 

@@ -10,11 +10,9 @@ User request (optional filters, e.g. "global", "codex only", "last 14 days", "ma
 
 ## 1. Resolve settings
 
-- **Storage scope** (where skills are saved): read `~/.lesson-loop/config` for a `scope=` line (`global` / `project` / `auto`; default `global`). Resolve the target dir the same way the reflect skill does:
-  - `global` → `~/.claude/skills`
-  - `project` → `<this project>/.claude/skills`
-  - `auto` → the project's `.claude/skills` if cwd looks like a project (`.git` or `.claude`), else `~/.claude/skills`
-  - Because history spans many projects, prefer **global** here unless the user asked otherwise or set `scope=project`.
+- **Quality rules**: read `../../rules/skill-quality.md` (relative to this skill's base directory) before extracting anything, and apply it to every transcript.
+- **Storage dirs**: general skills go to `~/.claude/skills`. History spans many projects, so for each transcript, project-specific skills go to **that transcript's own project**: `<transcript cwd>/.claude/skills` (only if that directory has `.git` or `.claude` and is not `$HOME`; otherwise skip project-specific knowledge). Never put one project's specifics into a global skill.
+- **Memory**: each Claude transcript's project memory is `<transcript dir>/memory/`; read the related notes so the skill doesn't contradict them.
 - **Threshold**: minimum tool calls for a session to be worth examining — default **5** (honor the user if they gave a number).
 - **Ledger** of already-mined transcripts: `~/.lesson-loop/processed` (one absolute path per line). Sessions listed here are skipped so re-runs do not redo work.
 
@@ -96,7 +94,7 @@ For each candidate transcript:
 
 1. **Read it — but bound the cost.** Recover the human intent: Claude transcripts carry an `ai-title` line and a `cwd`; Codex rollouts open with the first user message. For a **large transcript** (the tool-call count from step 2 is high, e.g. > 1500), do NOT read the whole file — that is what exhausts context and makes the run stall. Instead read selectively: the `ai-title`/`cwd`, the user turns (e.g. `grep '"role":"user"'` or `grep '"type":"user"'`), and a sample of the head and tail. Skip sub-agent/tool-only noise.
 2. **Judge reusability** with the reflect skill's bar — save only if at least one holds: a multi-step procedure that achieved a concrete outcome; recovery from a non-obvious error; a user correction that revealed a durable preference or project convention; a setup/config recipe likely to recur. If the session was trivial, exploratory, or one-off, save nothing for it.
-3. **Dedup before writing.** Glob `<target-dir>/*/SKILL.md` and read any on a related topic. If a similar skill exists, **IMPROVE** it with a targeted edit; only create `<target-dir>/<kebab-name>/SKILL.md` if none fits. Frontmatter: `name` and `description` (the description must say what it does AND when to load it), then a concise procedure — Goal, Steps, Tools used, Pitfalls/edge cases, and any user preference observed. Never paste the raw transcript.
+3. **Dedup and place before writing.** Classify the knowledge (general / project-specific / memory fact) per the rules. Glob `*/SKILL.md` in the global dir and in that project's dir and read every related skill. Extend an existing skill only if the material is within its description, and integrate it into the existing steps (no "Addendum"/"Phase N" sections); otherwise create a narrowly-scoped skill. Verify every concrete path/command against the current filesystem — old transcripts describe states that may no longer exist. Never paste the raw transcript.
 4. **Record the outcome** regardless of decision:
    - Append the transcript's absolute path to `~/.lesson-loop/processed` (so future runs skip it).
    - Append one audit line to `~/.lesson-loop/log`: `mined <created|updated|skipped> <skill-or-session> -- <one-line reason>`.
